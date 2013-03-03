@@ -167,10 +167,11 @@ next_generation([NewAliveBlues, NewAliveReds], NewBoardState)
 .
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 list_size_diff(List1, List2, Size) :-
-length(List1 L1),
-length(List2 L2),
-Size = L1 - L2.
+length(List1, L1),
+length(List2, L2),
+Size = (L1 - L2).
 
 land_grab(Alive, OtherPlayerAlive, Move) :-
  findall([A,B,MA,MB],(member([A,B], Alive),
