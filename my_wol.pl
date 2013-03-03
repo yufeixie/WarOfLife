@@ -69,6 +69,8 @@ AverageNext is (((Average*GamesPlayed)+NumberOfMoves)/GamesPlayed1),
 test_strategy_counter(N1, FirstPlayerStrategy, SecondPlayerStrategy, GamesPlayed1, NumberOfMoves, Draws, P1Next, P2Next, Longest1, Shortest1, AverageNext)
 .
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 max(A, B, A) :-
 A >= B.
 
@@ -82,6 +84,8 @@ min(A, B, B) :-
 A > B.
 
 forall(C1, C2) :- \+ (C1, \+ C2).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 bloodlust_helper(Alive, OtherPlayerAlive, Move) :-
  findall([A,B,MA,MB],(member([A,B], Alive),
@@ -131,7 +135,71 @@ bloodlust_helper(Alive, OtherPlayerAlive, Move),
 ),
 next_generation([NewAliveBlues, NewAliveReds], NewBoardState)
 .
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%self_preservation(PlayerColour, CurrentBoardState, NewBoardState, Move) :-
+self_preservation_helper(Alive, OtherPlayerAlive, Move) :-
+ findall([A,B,MA,MB],(member([A,B], Alive),
+                      neighbour_position(A,B,[MA,MB]),
+	              \+member([MA,MB],Alive),
+	              \+member([MA,MB],OtherPlayerAlive)),
+	 PossMoves),
+nth0(X, PossMoves, Move),
+alter_board(Move, Alive, NewAlive),
+next_generation([NewAlive,OtherPlayerAlive], [OtherPlayerNewAlive, Other]),
+length(OtherPlayerNewAlive, L1),
+forall(member(WorseMove, PossMoves), 
+(alter_board(WorseMove, Alive, WorseNewAlive),
+next_generation([WorseNewAlive,OtherPlayerAlive], [WorseOtherPlayerNewAlive, Other2]),
+length(WorseOtherPlayerNewAlive, L2),
+L1 >= L2))
+.
+
+self_preservation(Colour, CurrentBoardState, NewBoardState, Move) :-
+getAlive(Colour, CurrentBoardState, Alive, OtherPlayerAlive),
+self_preservation_helper(Alive, OtherPlayerAlive, Move),
+(Colour == b ->
+    alter_board(Move, Alive, NewAliveBlues),
+    alter_board(Move, OtherPlayerAlive, NewAliveReds)
+;   alter_board(Move, Alive, NewAliveReds),
+    alter_board(Move, OtherPlayerAlive, NewAliveBlues)
+),
+next_generation([NewAliveBlues, NewAliveReds], NewBoardState)
+.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+list_size_diff(List1, List2, Size) :-
+length(List1 L1),
+length(List2 L2),
+Size = L1 - L2.
+
+land_grab(Alive, OtherPlayerAlive, Move) :-
+ findall([A,B,MA,MB],(member([A,B], Alive),
+                      neighbour_position(A,B,[MA,MB]),
+	              \+member([MA,MB],Alive),
+	              \+member([MA,MB],OtherPlayerAlive)),
+	 PossMoves),
+nth0(X, PossMoves, Move),
+alter_board(Move, Alive, NewAlive),
+next_generation([NewAlive,OtherPlayerAlive], [NextGen,OtherNextGen]),
+list_size_diff(NextGen, OtherNextGen, Size1),
+forall(member(WorseMove, PossMoves), 
+(alter_board(WorseMove, Alive, WorseNewAlive),
+next_generation([WorseNewAlive,OtherPlayerAlive], [NextGen2,OtherNextGen2]),
+list_size_diff(NextGen2, OtherNextGen2, Size2),
+Size1 >= Size2))
+.
+
+land_grab(Colour, CurrentBoardState, NewBoardState, Move) :-
+getAlive(Colour, CurrentBoardState, Alive, OtherPlayerAlive),
+land_grab(Alive, OtherPlayerAlive, Move),
+(Colour == b ->
+    alter_board(Move, Alive, NewAliveBlues),
+    alter_board(Move, OtherPlayerAlive, NewAliveReds)
+;   alter_board(Move, Alive, NewAliveReds),
+    alter_board(Move, OtherPlayerAlive, NewAliveBlues)
+),
+next_generation([NewAliveBlues, NewAliveReds], NewBoardState)
+.
+
 
 
