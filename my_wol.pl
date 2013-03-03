@@ -69,7 +69,6 @@ AverageNext is (((Average*GamesPlayed)+NumberOfMoves)/GamesPlayed1),
 test_strategy_counter(N1, FirstPlayerStrategy, SecondPlayerStrategy, GamesPlayed1, NumberOfMoves, Draws, P1Next, P2Next, Longest1, Shortest1, AverageNext)
 .
 
-
 max(A, B, A) :-
 A >= B.
 
@@ -82,21 +81,57 @@ A =< B.
 min(A, B, B) :-
 A > B.
 
-/*min(Shortest, NumberOfMovesInput, Shortest1),
+forall(C1, C2) :- \+ (C1, \+ C2).
 
-bloodlust(PlayerColour, CurrentBoardState, NewBoardState, Move) :-
-
+bloodlust_helper(Alive, OtherPlayerAlive, Move) :-
+ findall([A,B,MA,MB],(member([A,B], Alive),
+                      neighbour_position(A,B,[MA,MB]),
+	              \+member([MA,MB],Alive),
+	              \+member([MA,MB],OtherPlayerAlive)),
+	 PossMoves),
+nth0(X, PossMoves, Move),
+alter_board(Move, Alive, NewAlive),
+next_generation([NewAlive,OtherPlayerAlive], [Other,OtherPlayerNewAlive]),
+length(OtherPlayerNewAlive, L1),
+forall(member(WorseMove, PossMoves), 
+(alter_board(WorseMove, Alive, WorseNewAlive),
+next_generation([WorseNewAlive,OtherPlayerAlive], [Other2,WorseOtherPlayerNewAlive]),
+length(WorseOtherPlayerNewAlive, L2),
+L1 =< L2))
 .
 
-self_preservation(PlayerColour, CurrentBoardState, NewBoardState, Move) :-
 
+getAlive(Colour, [A|[B]], Alive, OtherPlayerAlive):-
+(Colour == b ->
+    Alive = A,
+    OtherPlayerAlive = B
+;   Alive = B,
+    OtherPlayerAlive = A
+)
 .
 
-land_grab(PlayerColour, CurrentBoardState, NewBoardState, Move) :-
+% [[1,1],[2,6],[3,4],[3,5],[3,8],[4,1],[4,2],[5,7],[6,2],[7,1],[7,3],[7,5]]
 
+% [[1,8],[2,2],[2,8],[3,7],[4,6],[5,3],[6,6],[7,6],[7,7],[7,8],[8,3],[8,7]]
+
+% [[2,2],[2,3],[3,3]]
+
+% [[1,1]]
+
+
+
+bloodlust(Colour, CurrentBoardState, NewBoardState, Move) :-
+getAlive(Colour, CurrentBoardState, Alive, OtherPlayerAlive),
+bloodlust_helper(Alive, OtherPlayerAlive, Move),
+(Colour == b ->
+    alter_board(Move, Alive, NewAliveBlues),
+    alter_board(Move, OtherPlayerAlive, NewAliveReds)
+;   alter_board(Move, Alive, NewAliveReds),
+    alter_board(Move, OtherPlayerAlive, NewAliveBlues)
+),
+next_generation([NewAliveBlues, NewAliveReds], NewBoardState)
 .
 
-minimax(PlayerColour, CurrentBoardState, NewBoardState, Move) :-
+%self_preservation(PlayerColour, CurrentBoardState, NewBoardState, Move) :-
 
-.
-*/
+
