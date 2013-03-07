@@ -1,3 +1,4 @@
+:- ensure_loaded('war_of_life.pl').
 
 test_strategy(N, FirstPlayerStrategy, SecondPlayerStrategy) :-
 test_strategy_counter(N, FirstPlayerStrategy, SecondPlayerStrategy, 0, 0, 0, 0, 0, 0, 0, 0)
@@ -5,14 +6,15 @@ test_strategy_counter(N, FirstPlayerStrategy, SecondPlayerStrategy, 0, 0, 0, 0, 
 
 /*finish print*/
 test_strategy_counter(0, FirstPlayerStrategy, SecondPlayerStrategy, GamesPlayed, Draws, P1, P2, Longest, Shortest, Average, AverageTime) :-
-write('Draws = '),
-write(Draws),
-nl,
+AverageTimeForGame is AverageTime / (1000*GamesPlayed),
 write('Player 1 Wins = '),
 write(P1),
 nl,
 write('Player 2 Wins = '),
 write(P2),
+nl,
+write('Draws = '),
+write(Draws),
 nl,
 write('Longest Game = '),
 write(Longest),
@@ -24,7 +26,7 @@ write('Average Moves = '),
 write(Average),
 nl,
 write('Average Time = '),
-write(AverageTime)
+write(AverageTimeForGame)
 .
 
 /*first game*/
@@ -74,11 +76,33 @@ min(Shortest, NumberOfMoves, Shortest1),
     )
 ),
 AverageNext is (((Average*GamesPlayed)+NumberOfMoves)/GamesPlayed1),
-AverageTimeNext is (((AverageTime*GamesPlayed)+Time)/GamesPlayed1),
+AverageTimeNext is AverageTime+Time,
 test_strategy_counter(N1, FirstPlayerStrategy, SecondPlayerStrategy, GamesPlayed1, DrawsNext, P1Next, P2Next, Longest1, Shortest1, AverageNext, AverageTimeNext)
 .
 
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+max_list([H|T], M) :- 
+    max_list(T, H, M). 
+
+max_list([], Max, Max).
+max_list([H|T], Max, M) :- 
+    Max1 is max(Max, H), 
+    max_list(T, Max1, M).
+
+min_list([H|T], Min) :-
+    min_list(T, H, Min).
+
+min_list([], Min, Min).
+min_list([H|T], Min0, Min) :-
+    Min1 is min(H, Min0),
+    min_list(T, Min1, Min).
+
+sum_list([Item], Item).
+sum_list([Item1,Item2 | Tail], Total) :-
+    sum_list([Item1+Item2|Tail], Total).
 
 max(A, B, A) :-
 A >= B.
@@ -108,14 +132,6 @@ getAlive(Colour, [A|[B]], Alive, OtherPlayerAlive):-
 )
 .
 
-getPossMoves(Alive, OtherPlayerAlive, PossMoves) :-
- findall([A,B,MA,MB],(member([A,B], Alive),
-                      neighbour_position(A,B,[MA,MB]),
-	              \+member([MA,MB],Alive),
-	              \+member([MA,MB],OtherPlayerAlive)),
-	 PossMoves)
-.
-
 getBoardAfterMove(X, PossMoves, Move, Alive, OtherPlayerAlive, NextGen, OtherPlayerNextGen) :-
 nth0(X, PossMoves, Move),
 alter_board(Move, Alive, NewAlive),
@@ -125,117 +141,123 @@ next_generation([NewAlive,OtherPlayerAlive], [NextGen, OtherPlayerNextGen])
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-bloodlust_helper(Alive, OtherPlayerAlive, Move) :-
-getPossMoves(Alive, OtherPlayerAlive, PossMoves),
-getBoardAfterMove(X, PossMoves, Move, Alive, OtherPlayerAlive, NextGen, OtherPlayerNextGen),
-length(OtherPlayerNextGen, L1),
-forall(member(WorseMove, PossMoves), 
-(alter_board(WorseMove, Alive, NewAlive),
-next_generation([NewAlive,OtherPlayerAlive], [_, WorseOtherPlayerNextGen]),
-length(WorseOtherPlayerNextGen, L2),
-L1 =< L2))
-.
+bloodlust('b',[Blues,Reds],[NewBlues,Reds],Move) :- 
+    strategy_helper('b',Blues,Reds,'b',Move),
+    alter_board(Move,Blues,NewBlues).
 
-bloodlust(Colour, CurrentBoardState, NewBoardState, Move) :-
-getAlive(Colour, CurrentBoardState, Alive, OtherPlayerAlive),
-bloodlust_helper(Alive, OtherPlayerAlive, Move),
-(Colour == b ->
-    alter_board(Move, Alive, NewAliveBlues),
-    alter_board(Move, OtherPlayerAlive, NewAliveReds)
-;   alter_board(Move, Alive, NewAliveReds),
-    alter_board(Move, OtherPlayerAlive, NewAliveBlues)
-),
-next_generation([NewAliveBlues, NewAliveReds], NewBoardState)
-.
+bloodlust('r',[Blues,Reds],[Blues,NewReds],Move) :- 
+    strategy_helper('r',Reds,Blues,'b',Move),
+    alter_board(Move,Reds,NewReds).
 
+self_preservation('b',[Blues,Reds],[NewBlues,Reds],Move):- 
+    strategy_helper('b',Blues,Reds,'s',Move),
+    alter_board(Move,Blues,NewBlues).
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+self_preservation('r',[Blues,Reds],[Blues,NewReds],Move) :-
+    strategy_helper('r',Reds,Blues,'s',Move),
+    alter_board(Move,Reds,NewReds).
 
+land_grab('b',[Blues,Reds],[NewBlues,Reds],Move) :-
+    strategy_helper('b',Blues,Reds,'l',Move),
+    alter_board(Move,Blues,NewBlues).
 
-self_preservation_helper(Alive, OtherPlayerAlive, Move) :-
-getPossMoves(Alive, OtherPlayerAlive, PossMoves),
-getBoardAfterMove(X, PossMoves, Move, Alive, OtherPlayerAlive, NextGen, OtherPlayerNextGen),
-length(NextGen, L1),
-forall(member(WorseMove, PossMoves), 
-(alter_board(WorseMove, Alive, NewAlive),
-next_generation([NewAlive,OtherPlayerAlive], [WorseNextGen, _]),
-length(WorseNextGen, L2),
-L1 >= L2))
-.
+land_grab('r',[Blues,Reds],[Blues,NewReds],Move) :-
+    strategy_helper('r',Reds,Blues,'l',Move),
+    alter_board(Move,Reds,NewReds).
 
-self_preservation(Colour, CurrentBoardState, NewBoardState, Move) :-
-getAlive(Colour, CurrentBoardState, Alive, OtherPlayerAlive),
-self_preservation_helper(Alive, OtherPlayerAlive, Move),
-(Colour == b ->
-    alter_board(Move, Alive, NewAliveBlues),
-    alter_board(Move, OtherPlayerAlive, NewAliveReds)
-;   alter_board(Move, Alive, NewAliveReds),
-    alter_board(Move, OtherPlayerAlive, NewAliveBlues)
-),
-next_generation([NewAliveBlues, NewAliveReds], NewBoardState)
-.
+minimax('b',[Blues,Reds],[NewBlues,Reds],Move) :-
+    strategy_helper('b',Blues,Reds,'m',Move),
+    alter_board(Move,Blues,NewBlues).
 
+minimax('r',[Blues,Reds],[Blues,NewReds],Move) :-
+    strategy_helper('r',Reds,Blues,'m',Move),
+    alter_board(Move,Reds,NewReds).
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-land_grab(Alive, OtherPlayerAlive, Move) :-
-getPossMoves(Alive, OtherPlayerAlive, PossMoves),
-getBoardAfterMove(X, PossMoves, Move, Alive, OtherPlayerAlive, NextGen, OtherPlayerNextGen),
-list_size_diff(NextGen, OtherPlayerNextGen, Size1),
-forall(member(WorseMove, PossMoves), 
-(alter_board(WorseMove, Alive, NewAlive),
-next_generation([NewAlive,OtherPlayerAlive], [WorseNextGen, WorseOtherPlayerNextGen]),
-list_size_diff(WorseNextGen, WorseOtherPlayerNextGen, Size2),
-Size1 >= Size2))
-.
-
-land_grab(Colour, CurrentBoardState, NewBoardState, Move) :-
-getAlive(Colour, CurrentBoardState, Alive, OtherPlayerAlive),
-land_grab(Alive, OtherPlayerAlive, Move),
-(Colour == b ->
-    alter_board(Move, Alive, NewAliveBlues),
-    alter_board(Move, OtherPlayerAlive, NewAliveReds)
-;   alter_board(Move, Alive, NewAliveReds),
-    alter_board(Move, OtherPlayerAlive, NewAliveBlues)
-),
-next_generation([NewAliveBlues, NewAliveReds], NewBoardState)
-.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-minimax_score('b',Move,[AliveBlues,AliveReds],Score)
-   :- alter_board(Move,AliveBlues,NewAliveBlues),
-      next_generation([NewAliveBlues,AliveReds],NextBoardState),
-      land_grab('r',NextBoardState,FinalBoardState,_),
-      next_generation(FinalBoardState,[FinalBluePositions,FinalRedPositions]),
-      length(FinalBluePositions,OwnScore),
-      length(FinalRedPositions,OtherPlayerScore),
-      Score is OwnScore - OtherPlayerScore.
-minimax_score('r',Move,[AliveReds,AliveBlues],Score)
-   :- alter_board(Move,AliveReds,NewAliveReds),
-      next_generation([AliveBlues,NewAliveReds],NextBoardState),
-      land_grab('b',NextBoardState,FinalBoardState,_),
-      next_generation(FinalBoardState,[FinalBluePositions,FinalRedPositions]),
-      length(FinalBluePositions,OtherPlayerScore),
-      length(FinalRedPositions,OwnScore),
-      Score is OwnScore - OtherPlayerScore.
-
-minimax_move(Colour,Alive,OtherPlayerAlive,Move)
-  :- findall(([A,B,MA,MB],Score),
+strategy_helper(Colour,Alive,OtherPlayerAlive,Strategy,Move) :- 
+  findall(([A,B,MA,MB],Score),
             (
              member([A,B],Alive),neighbour_position(A,B,[MA,MB]),
              \+member([MA,MB],Alive),\+member([MA,MB],OtherPlayerAlive),
-             minimax_score(Colour,[A,B,MA,MB],[Alive,OtherPlayerAlive],Score)
+             determine_strategy(Strategy,Colour,[A,B,MA,MB],[Alive,OtherPlayerAlive],Score)
             ),
             PossibleMoveScore),
-     findall(Score, member((_,Score),PossibleMoveScore),ScoreList),
-     max_list(ScoreList,MaxScore),
-     member((Move,MaxScore),PossibleMoveScore).
+     findall(Score, member((_,Score),PossibleMoveScore), ScoreList),
+     find_min_max(Strategy,ScoreList,MinScore),
+     member((Move,MinScore),PossibleMoveScore).
 
-% strategy entry point - makes move based on player colour %
-minimax('b',[AliveBlues,AliveReds],[NewAliveBlues,AliveReds],Move)
-  :- minimax_move('b',AliveBlues,AliveReds,Move),
-     alter_board(Move,AliveBlues,NewAliveBlues).
-minimax('r',[AliveBlues,AliveReds],[AliveBlues,NewAliveReds],Move)
-  :- minimax_move('r',AliveReds,AliveBlues,Move),
-     alter_board(Move,AliveReds,NewAliveReds).
+find_min_max('b',ScoreList,Move) :-
+    min_list(ScoreList,Move).
+
+find_min_max('s',ScoreList,Move) :-
+    max_list(ScoreList,Move).
+
+find_min_max('l',ScoreList,Move) :-
+    max_list(ScoreList,Move).
+
+find_min_max('m',ScoreList,Move) :-
+    max_list(ScoreList,Move).
+
+determine_strategy('b',Colour,[A,B,MA,MB],[Alive,OtherPlayerAlive],Score) :-
+    bloodlust_helper(Colour,[A,B,MA,MB],[Alive,OtherPlayerAlive],Score).
+
+determine_strategy('s',Colour,[A,B,MA,MB],[Alive,OtherPlayerAlive],Score) :-
+    self_pres_helper(Colour,[A,B,MA,MB],[Alive,OtherPlayerAlive],Score).    
+
+determine_strategy('l',Colour,[A,B,MA,MB],[Alive,OtherPlayerAlive],Score) :-
+    land_grab_helper(Colour,[A,B,MA,MB],[Alive,OtherPlayerAlive],Score).
+
+determine_strategy('m',Colour,[A,B,MA,MB],[Alive,OtherPlayerAlive],Score) :-
+    minimax_helper(Colour,[A,B,MA,MB],[Alive,OtherPlayerAlive],Score).
+
+bloodlust_helper('b',Move,[Blues,Reds],Score) :-
+    alter_board(Move,Blues,NewBlues),
+    next_generation([NewBlues,Reds],[_,NewRedPositions]),
+    length(NewRedPositions,Score).
+
+bloodlust_helper('r',Move,[Reds,Blues],Score) :-
+    alter_board(Move,Reds,NewReds),
+    next_generation([Blues,NewReds],[NewBluePositions,_]),
+    length(NewBluePositions,Score).
+
+self_pres_helper('r',Move,[Reds,Blues],Score) :-
+    alter_board(Move,Reds,NewReds),
+    next_generation([Blues,NewReds],[_,NewRedPositions]),
+    length(NewRedPositions,Score).
+
+self_pres_helper('b',Move,[Blues,Reds],Score) :- 
+    alter_board(Move,Blues,NewBlues),
+    next_generation([NewBlues,Reds],[NewBluePositions,_]),
+    length(NewBluePositions,Score).
+
+land_grab_helper('r',Move,[Reds,Blues],Score) :-
+    alter_board(Move,Reds,NewReds),
+    next_generation([Blues,NewReds],[NewBluePositions,NewRedPositions]),
+    length(NewBluePositions,OtherPlayerScore),
+    length(NewRedPositions,OwnScore),
+    Score is OwnScore - OtherPlayerScore.
+
+land_grab_helper('b',Move,[Blues,Reds],Score) :-
+    alter_board(Move,Blues,NewBlues),
+    next_generation([NewBlues,Reds],[NewBluePositions,NewRedPositions]),
+    length(NewBluePositions,OwnScore),
+    length(NewRedPositions,OtherPlayerScore),
+    Score is OwnScore - OtherPlayerScore.
+
+minimax_helper('r',Move,[Reds,Blues],Score) :-
+    alter_board(Move,Reds,NewReds),
+    next_generation([Blues,NewReds],NewBoardState),
+    land_grab('b',NewBoardState,FinalBoardState,_),
+    next_generation(FinalBoardState,[FinalBluePositions,FinalRedPositions]),
+    length(FinalBluePositions,OtherPlayerScore),
+    length(FinalRedPositions,OwnScore),
+    Score is OwnScore - OtherPlayerScore.
+
+minimax_helper('b',Move,[Blues,Reds],Score) :-
+    alter_board(Move,Blues,NewBlues),
+    next_generation([NewBlues,Reds],NewBoardState),
+    land_grab('r',NewBoardState,FinalBoardState,_),
+    next_generation(FinalBoardState,[FinalBluePositions,FinalRedPositions]),
+    length(FinalBluePositions,OwnScore),
+    length(FinalRedPositions,OtherPlayerScore),
+    Score is OwnScore - OtherPlayerScore.
+
