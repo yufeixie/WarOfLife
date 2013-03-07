@@ -202,5 +202,26 @@ land_grab(Alive, OtherPlayerAlive, Move),
 next_generation([NewAliveBlues, NewAliveReds], NewBoardState)
 .
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+minimax_move(Colour,Alive,OtherPlayerAlive,Move)
+ :- findall(([A,B,MA,MB],Score),
+            (
+             member([A,B],Alive),neighbour_position(A,B,[MA,MB]),
+             \+member([MA,MB],Alive),\+member([MA,MB],OtherPlayerAlive),
+             minimax_score(Colour,[A,B,MA,MB],[Alive,OtherPlayerAlive],Score)
+            ),
+            PossibleMoveScore),
+     findall(Score, member((_,Score),PossibleMoveScore),ScoreList),
+     max_list(ScoreList,MaxScore),
+     member((Move,MaxScore),PossibleMoveScore).
 
+minimax('b',[AliveBlues,AliveReds],[NewAliveBlues,AliveReds],Move)
+  :- minimax_move('b',AliveBlues,AliveReds,Move),
+     alter_board(Move,AliveBlues,NewAliveBlues).
+
+minimax('r',[AliveBlues,AliveReds],[AliveBlues,NewAliveReds],Move)
+  :- minimax_move('r',AliveReds,AliveBlues,Move),
+     alter_board(Move,AliveReds,NewAliveReds).
+
+    
