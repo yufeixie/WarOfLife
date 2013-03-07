@@ -1,17 +1,10 @@
-% [[1,1],[2,6],[3,4],[3,5],[3,8],[4,1],[4,2],[5,7],[6,2],[7,1],[7,3],[7,5]]
-
-% [[1,8],[2,2],[2,8],[3,7],[4,6],[5,3],[6,6],[7,6],[7,7],[7,8],[8,3],[8,7]]
-
-% [[2,2],[2,3],[3,3]]
-
-% [[1,1]]
 
 test_strategy(N, FirstPlayerStrategy, SecondPlayerStrategy) :-
-test_strategy_counter(N, FirstPlayerStrategy, SecondPlayerStrategy, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+test_strategy_counter(N, FirstPlayerStrategy, SecondPlayerStrategy, 0, 0, 0, 0, 0, 0, 0, 0)
 .
 
 /*finish print*/
-test_strategy_counter(0, FirstPlayerStrategy, SecondPlayerStrategy, GamesPlayed, NumberOfMovesInput, Draws, P1, P2, Longest, Shortest, Average, AverageTime) :-
+test_strategy_counter(0, FirstPlayerStrategy, SecondPlayerStrategy, GamesPlayed, Draws, P1, P2, Longest, Shortest, Average, AverageTime) :-
 write('Draws = '),
 write(Draws),
 nl,
@@ -35,52 +28,54 @@ write(AverageTime)
 .
 
 /*first game*/
-test_strategy_counter(N, FirstPlayerStrategy, SecondPlayerStrategy, 0, NumberOfMovesInput, Draws, P1, P2, Longest, Shortest, Average, AverageTime) :-
+test_strategy_counter(N, FirstPlayerStrategy, SecondPlayerStrategy, 0, Draws, P1, P2, Longest, Shortest, Average, AverageTime) :-
+statistics(runtime, [Time1,_]),
 play(quiet, FirstPlayerStrategy, SecondPlayerStrategy, NumberOfMoves, WinningPlayer),
-statistics(runtime, [_,Time]),
+statistics(runtime, [Time2,_]),
+Time is Time2 - Time1,
 N1 is N-1,
 (WinningPlayer == b ->
     P1Next is P1+1,
-    P2Next is P2
-;   P2Next is P2+1,
-    P1Next is P1
+    P2Next is P2,
+    DrawsNext is Draws
+;   (WinningPlayer == r ->
+        P2Next is P2+1,
+        P1Next is P1,
+        DrawsNext is Draws
+    ;   DrawsNext is Draws+1,
+        P2Next is P2,
+        P1Next is P1
+    )
 ),
-test_strategy_counter(N1, FirstPlayerStrategy, SecondPlayerStrategy, 1, NumberOfMoves, Draws, P1Next, P2Next, NumberOfMoves, NumberOfMoves, NumberOfMoves, Time)
-.
-
-/*draw*/
-test_strategy_counter(N, FirstPlayerStrategy, SecondPlayerStrategy, GamesPlayed, 250, Draws, P1, P2, Longest, Shortest, Average, AverageTime) :-
-play(quiet, FirstPlayerStrategy, SecondPlayerStrategy, NumberOfMoves, WinningPlayer),
-statistics(runtime, [_,Time]),
-N1 is N-1,
-GamesPlayed1 is GamesPlayed+1,
-DrawsNext is Draws+1,
-max(Longest, 250, Longest1),
-min(Shortest, 250, Shortest1),
-P1Next is P1+1,
-P2Next is P2+1,
-AverageNext is (((Average*GamesPlayed)+NumberOfMoves)/GamesPlayed1),
-AverageTimeNext is (((AverageTime*GamesPlayed)+Time)/GamesPlayed1),
-test_strategy_counter(N1, FirstPlayerStrategy, SecondPlayerStrategy, GamesPlayed1, NumberOfMoves, DrawsNext, P1Next, P2Next, Longest1, Shortest1, AverageNext, AverageTimeNext)
+test_strategy_counter(N1, FirstPlayerStrategy, SecondPlayerStrategy, 1, DrawsNext, P1Next, P2Next, NumberOfMoves, NumberOfMoves, NumberOfMoves, Time)
 .
 
 /*blue or red*/
-test_strategy_counter(N, FirstPlayerStrategy, SecondPlayerStrategy, GamesPlayed, NumberOfMovesInput, Draws, P1, P2, Longest, Shortest, Average, AverageTime) :-
+test_strategy_counter(N, FirstPlayerStrategy, SecondPlayerStrategy, GamesPlayed, Draws, P1, P2, Longest, Shortest, Average, AverageTime) :-
+statistics(runtime, [Time1,_]),
 play(quiet, FirstPlayerStrategy, SecondPlayerStrategy, NumberOfMoves, WinningPlayer),
-statistics(runtime, [_,Time]),
+statistics(runtime, [Time2,_]),
+Time is Time2 - Time1,
 N1 is N-1,
 GamesPlayed1 is GamesPlayed+1,
 max(Longest, NumberOfMoves, Longest1),
 min(Shortest, NumberOfMoves, Shortest1),
 (WinningPlayer == b ->
     P1Next is P1+1,
-    P2Next is P2
-;   P2Next is P2+1,
-    P1Next is P1
+    P2Next is P2,
+    DrawsNext is Draws
+;   (WinningPlayer == r ->
+        P2Next is P2+1,
+        P1Next is P1,
+        DrawsNext is Draws
+    ;   DrawsNext is Draws+1,
+        P2Next is P2,
+        P1Next is P1
+    )
 ),
 AverageNext is (((Average*GamesPlayed)+NumberOfMoves)/GamesPlayed1),
 AverageTimeNext is (((AverageTime*GamesPlayed)+Time)/GamesPlayed1),
-test_strategy_counter(N1, FirstPlayerStrategy, SecondPlayerStrategy, GamesPlayed1, NumberOfMoves, Draws, P1Next, P2Next, Longest1, Shortest1, AverageNext, AverageTimeNext)
+test_strategy_counter(N1, FirstPlayerStrategy, SecondPlayerStrategy, GamesPlayed1, DrawsNext, P1Next, P2Next, Longest1, Shortest1, AverageNext, AverageTimeNext)
 .
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
